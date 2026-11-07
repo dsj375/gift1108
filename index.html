@@ -584,6 +584,7 @@
 </main>
 
 <!-- 背景音乐：把歌曲文件放在与本页同一目录，命名 bgm.mp3（或 bgm.m4a / bgm.flac / bgm.wav），点开箱时会自动淡入播放 -->
+<!-- 只循环高潮片段：在下方脚本里改 BGM_START（第几秒开始）和 BGM_LENGTH（循环多少秒） -->
 <audio id="bgm" loop preload="auto">
   <source src="./bgm.mp3" type="audio/mpeg">
   <source src="./bgm.m4a" type="audio/mp4">
@@ -795,6 +796,18 @@
   var audioReady = false;
   var VOLUME = 0.42;
 
+  /* 只循环高潮片段（单位：秒）。bgm.mp3 本身已是剪好的高潮段，整段循环 */
+  var BGM_START = 0;
+  var BGM_LENGTH = 30;
+
+  function seekSegmentStart() {
+    try {
+      if (audio.currentTime < BGM_START || audio.currentTime > BGM_START + BGM_LENGTH) {
+        audio.currentTime = BGM_START;
+      }
+    } catch (e) {}
+  }
+
   function setMusicState(playing) {
     bgmBtn.classList.toggle("is-playing", playing);
     bgmBtn.classList.toggle("is-muted", !playing);
@@ -825,6 +838,7 @@
 
   bgmBtn.addEventListener("click", function () {
     if (audio.paused) {
+      seekSegmentStart();
       var p = audio.play();
       if (p && p.then) p.catch(function () {});
       setMusicState(true);
@@ -834,9 +848,17 @@
     }
   });
 
+  /* 高潮片段循环：播到 BGM_START + BGM_LENGTH 就跳回起点 */
+  audio.addEventListener("timeupdate", function () {
+    if (BGM_START + BGM_LENGTH > 0 && audio.currentTime >= BGM_START + BGM_LENGTH) {
+      try { audio.currentTime = BGM_START; } catch (e) {}
+    }
+  });
+
   /* 开箱的这一次点击也用来启动音乐（浏览器要求用户手势） */
   var startMusicOnce = function () {
     if (!audioReady) return;
+    seekSegmentStart();
     var p = audio.play();
     if (p && p.then) {
       p.then(function () {
